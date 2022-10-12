@@ -1,0 +1,6 @@
+backend/.env
+backend/src/__pycache__
+backend/src/auth/__pycache__
+backend/src/database/__pycache__
+backend/src/trivia
+frontend/node_modules
