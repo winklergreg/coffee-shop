@@ -23,10 +23,6 @@ def after_request(response):
 
 db_drop_and_create_all()
 
-@app.route('/')
-def home():
-    return "testing"
-
 # ROUTES
 @app.route('/drinks')
 def get_drinks():
@@ -41,7 +37,6 @@ def get_drinks():
 @requires_auth('get:drinks-detail')
 def get_drink_details(payload):
     drinks = Drink.query.order_by(Drink.id).all()
-    #print([{d.title: json.loads(d.recipe)} for d in drinks])
     
     return jsonify({
         'success': True,
@@ -59,7 +54,6 @@ def create_drink(payload):
         if isinstance(recipe, dict):
             recipe = [recipe]
 
-        print(recipe)
         drink = Drink()
         drink.title = req['title']
         drink.recipe = json.dumps(recipe)
@@ -76,27 +70,28 @@ def create_drink(payload):
 @requires_auth('patch:drinks')
 def update_drink(payload, drink_id):
     req = request.get_json()
-    drink = Drink.query.get(Drink.id==drink_id)
+    drink = Drink.query.filter(Drink.id==drink_id).one_or_none()
 
     if not drink:
         abort(404)
-
     try: 
-        drink['title'] = req.get('title')
-        drink['recipe'] = req.get('recipe')
+        if req.get('title'):
+            drink.title = req.get('title')
+        if req.get('recipe'):
+            drink.recipe = json.dumps(req.get('recipe'))
         drink.update()
     except:
-        abort(404)
+        abort(400)
 
     return jsonify({
         'success': True,
-        'drinks': [d.long()]
+        'drinks': [drink.long()]
     }), 200
 
 @app.route('/drinks/<int:drink_id>', methods=['DELETE'])
 @requires_auth('delete:drinks')
 def delete_drink(payload, drink_id):
-    drink = Drink.query.get(Drink.id==drink_id)
+    drink = Drink.query.filter(Drink.id==drink_id).one_or_none()
 
     if not drink:
         abort(404)
@@ -112,7 +107,7 @@ def delete_drink(payload, drink_id):
 
 # Error Handling
 @app.errorhandler(AuthError)
-def unprocessable(error):
+def auth_error(error):
     return jsonify({
         "success": False,
         "error": error.status_code,
@@ -120,7 +115,7 @@ def unprocessable(error):
     }), error.status_code
 
 @app.errorhandler(400)
-def unprocessable(error):
+def bad_request(error):
     return jsonify({
         "success": False,
         "error": 400,
